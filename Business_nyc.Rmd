@@ -1,0 +1,62 @@
+---
+  title: "Testes"
+author: "Christopher Eshleman"
+date: "5/12/2018"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+There's data out there on business generation. 
+
+A count of new businesses could be used, for example, as an indicator of general business conditions, particularly if the parent analysis included the right controls. 
+
+A quick peeek at the univariate distribution will offer clues. 
+
+The data comes from the City of New York Department of Consumer Affairs. It's a tally, by year, of the firms or people securing and holding a City license so that they may "legally operate in New York City". It excludes, for whatever reason, sightseeing guides and temporary street fair vendors, but that can't be a big number we I'll call it the population of City license-holders. 
+
+```{r business, echo=FALSE}
+cat("\014") 
+rm(list=ls())
+dev.off() 
+
+library(plyr) 
+library(doBy) 
+library(rgdal) 
+library(ggplot2) 
+library(zipcode) 
+```
+
+I'm not sure I'll need all these packages yet but, eventually, I'll be mapping this stuff. Load the data, extract the year and count annual observations by ZIP code. 
+
+```{r, echo=FALSE}
+biz = read.csv("/Users/chriseshleman/Dropbox/Research_and_training_2/Business/Legally_Operating_Businesses.csv") 
+biz$year = format(as.Date(biz$License.Creation.Date, format="%d/%m/%Y"),"%Y")
+today = subset(biz,biz$year==2016) 
+today$one = 1 
+tab = summaryBy(one ~ year + Address.ZIP, FUN=sum, data=today) 
+```
+
+There are more unique ZIP codes in here than there should be. I'll plow through that for now and figure it out on the flip side. 
+
+Import the shapefiles by ZIP code. 
+
+```{r, echo=FALSE, results="hide"}
+temp = tempfile() 
+url="https://data.cityofnewyork.us/download/i8iw-xf4u/application%2Fzip" 
+download.file(url, temp) 
+unzip(temp,exdir=getwd()) 
+zips = readOGR("/Users/chriseshleman/Dropbox/Research_and_training_2/Business/ZIP_CODE_040114/ZIP_CODE_040114.shp","ZIP_CODE_040114") 
+
+show = ggplot(data = tab) + 
+  geom_boxplot(mapping = aes("var",one.sum)) + 
+  xlab("") + 
+  ylab("New businesses by ZIP code") + 
+  scale_x_discrete(breaks=NULL) + 
+  coord_flip()
+ggsave(show,file="/Users/chriseshleman/Dropbox/Research_and_training_2/Business/Box by ZIP 20180512.png",units="cm",width=12,height=8) 
+```
